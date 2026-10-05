@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administrador de Tableros Semanales</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans p-4 md:p-8">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+    
+    <!-- Encabezado Principal -->
+    <header class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2">
+          <i data-lucide="layout-dashboard" class="text-indigo-600"></i>
+          Generador de Tableros Semanales
+        </h1>
+        <p class="text-slate-500 text-sm mt-1">Configura las rutinas de la semana y genera los tableros HTML independientes para los celulares de tus hijos.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="exportarConfiguracion()" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition">
+          <i data-lucide="download" class="w-4 h-4"></i> Respaldar (JSON)
+        </button>
+        <label class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition">
+          <i data-lucide="upload" class="w-4 h-4"></i> Cargar
+          <input type="file" id="importFile" onchange="importarConfiguracion(event)" class="hidden" accept=".json">
+        </label>
+      </div>
+    </header>
+
+    <!-- Selección de Hijo -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button id="btnHijo1" onclick="seleccionarHijo('hijo1')" class="p-5 rounded-2xl border-2 transition text-left flex items-center justify-between shadow-sm bg-white border-indigo-600 ring-2 ring-indigo-100">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl" id="avatarHijo1">E</div>
+          <div>
+            <h2 class="font-bold text-lg text-slate-900" id="labelNombreHijo1">Emma</h2>
+            <p class="text-xs text-slate-500">Configurar rutina semanal</p>
+          </div>
+        </div>
+        <i data-lucide="chevron-right" class="text-slate-400"></i>
+      </button>
+
+      <button id="btnHijo2" onclick="seleccionarHijo('hijo2')" class="p-5 rounded-2xl border-2 transition text-left flex items-center justify-between shadow-sm bg-white border-slate-200 hover:border-slate-300">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xl" id="avatarHijo2">S</div>
+          <div>
+            <h2 class="font-bold text-lg text-slate-900" id="labelNombreHijo2">Sebastián</h2>
+            <p class="text-xs text-slate-500">Configurar rutina semanal</p>
+          </div>
+        </div>
+        <i data-lucide="chevron-right" class="text-slate-400"></i>
+      </button>
+    </div>
+
+    <!-- Panel de Edición del Hijo Seleccionado -->
+    <main class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+      
+      <!-- Datos Generales -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pb-6 border-b border-slate-100">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nombre del Hijo/a</label>
+          <input type="text" id="inputNombre" onchange="actualizarDatosHijo()" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Nombre">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">PIN de Seguridad (para reinicio)</label>
+          <input type="password" id="inputPin" maxlength="4" onchange="actualizarDatosHijo()" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Ej: 1234">
+        </div>
+        <div class="flex items-end">
+          <button onclick="descargarHTMLHijo()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2">
+            <i data-lucide="file-down" class="w-5 h-5"></i>
+            Generar y Descargar Tablero (.html)
+          </button>
+        </div>
+      </div>
+
+      <!-- Selector de Día y Copiado de Tareas -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Selecciona el Día para Asignar Tareas</label>
+          <div class="flex flex-wrap gap-2" id="tabsDias">
+            <!-- Generado dinámicamente -->
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center gap-2 self-start md:self-end">
+          <span class="text-xs font-medium text-slate-600 flex items-center gap-1">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar de:
+          </span>
+          <select id="selectDiaOrigen" class="px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></select>
+          <button onclick="copiarTareasDeOtroDia()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium px-3 py-1 rounded-lg transition">
+            Copiar
+          </button>
+        </div>
+      </div>
+
+      <!-- Formulario para Agregar Tarea -->
+      <form onsubmit="agregarTarea(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+        <div class="md:col-span-5">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Descripción de la Tarea / Responsabilidad</label>
+          <input type="text" id="nuevaTareaTexto" placeholder="Ej: Tender la cama, Estudiar 20 min..." class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Selecciona Ícono / Categoría</label>
+          <select id="nuevaTareaEmoji" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <optgroup label="🏠 Casa y Orden">
+              <option value="🛏️">🛏️ Tender la cama</option>
+              <option value="🧹">🧹 Limpiar / Barrer cuarto</option>
+              <option value="🧸">🧸 Ordenar juguetes / cosas</option>
+              <option value="🧺">🧺 Ropa sucia en su lugar</option>
+              <option value="🍽️">🍽️ Poner o recoger la mesa</option>
+              <option value="🗑️">🗑️ Sacar la basura</option>
+            </optgroup>
+            <optgroup label="📚 Escuela y Estudio">
+              <option value="📚">📚 Leer / Hacer tareas</option>
+              <option value="✏️">✏️ Repasar / Escribir</option>
+              <option value="🎒">🎒 Alistar la mochila</option>
+              <option value="💻">💻 Computadora / Clase</option>
+              <option value="🎨">🎨 Dibujar / Manualidades</option>
+            </optgroup>
+            <optgroup label="🪥 Cuidado Personal">
+              <option value="🪥">🪥 Lavarse los dientes</option>
+              <option value="🚿">🚿 Bañarse</option>
+              <option value="⚡">⚡ Cambiarse de ropa/uniforme</option>
+              <option value="🥗">🥗 Comer verduras / Comida</option>
+              <option value="💧">💧 Tomar agua</option>
+              <option value="💤">💤 Dormir a tiempo</option>
+            </optgroup>
+            <optgroup label="⚽ Deporte y Actividad">
+              <option value="⚽">⚽ Entrenar fútbol</option>
+              <option value="🏀">🏀 Básquetbol</option>
+              <option value="🏃">🏃 Ejercicio / Salir a correr</option>
+              <option value="🚲">🚲 Salir en bicicleta</option>
+            </optgroup>
+            <optgroup label="⭐ General / Premio">
+              <option value="⭐">⭐ Estrella / Tarea especial</option>
+              <option value="🎯">🎯 Objetivo diario</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Puntos / Estrellas</label>
+          <input type="number" id="nuevaTareaPuntos" value="1" min="1" max="10" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div class="md:col-span-2">
+          <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-3 rounded-lg text-sm transition flex items-center justify-center gap-1">
+            <i data-lucide="plus" class="w-4 h-4"></i> Agregar
+          </button>
+        </div>
+      </form>
+
+      <!-- Lista de Tareas del Día -->
+      <div>
+        <h3 class="font-semibold text-slate-800 mb-3 flex items-center justify-between">
+          <span id="tituloDiaSeleccionado">Tareas asignadas</span>
+          <span class="text-xs font-normal text-slate-500" id="contadorTareas">0 tareas</span>
+        </h3>
+        <div id="listaTareasDia" class="space-y-2"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    
+    let estadoApp = {
+      hijoActivo: 'hijo1',
+      hijo1: {
+        nombre: 'Emma',
+        pin: '1234',
+        rutina: { 'Lunes': [], 'Martes': [], 'Miércoles': [], 'Jueves': [], 'Viernes': [], 'Sábado': [], 'Domingo': [] }
+      },
+      hijo2: {
+        nombre: 'Sebastián',
+        pin: '1234',
+        rutina: { 'Lunes': [], 'Martes': [], 'Miércoles': [], 'Jueves': [], 'Viernes': [], 'Sábado': [], 'Domingo': [] }
+      }
+    };
+
+    let diaSeleccionado = 'Lunes';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarStorage();
+      renderTabsDias();
+      renderVistaHijo();
+      lucide.createIcons();
+    });
+
+    function seleccionarHijo(hijoKey) {
+      estadoApp.hijoActivo = hijoKey;
+      renderVistaHijo();
+    }
+
+    function renderVistaHijo() {
+      const hijo = estadoApp[estadoApp.hijoActivo];
+      document.getElementById('inputNombre').value = hijo.nombre;
+      document.getElementById('inputPin').value = hijo.pin;
+
+      document.getElementById('labelNombreHijo1').innerText = estadoApp.hijo1.nombre || 'Hijo 1';
+      document.getElementById('avatarHijo1').innerText = (estadoApp.hijo1.nombre[0] || 'H1').toUpperCase();
+      
+      document.getElementById('labelNombreHijo2').innerText = estadoApp.hijo2.nombre || 'Hijo 2';
+      document.getElementById('avatarHijo2').innerText = (estadoApp.hijo2.nombre[0] || 'H2').toUpperCase();
+
+      const btn1 = document.getElementById('btnHijo1');
+      const btn2 = document.getElementById('btnHijo2');
+
+      if(estadoApp.hijoActivo === 'hijo1') {
+        btn1.className = "p-5 rounded-2xl border-2 transition text-left flex items-center justify-between shadow-sm bg-white border-indigo-600 ring-2 ring-indigo-100";
+        btn2.className = "p-5 rounded-2xl border-2 transition text-left flex items-center justify-between shadow-sm bg-white border-slate-200 hover:border-slate-300";
+      } else {
+        btn2.className = "p-5 rounded-2xl border-2 transition text-left flex items-center justify-between shadow-sm bg-white border-emerald-600 ring-2 ring-emerald-100";
+        btn1.className = "p-5 rounded-2xl border-2 transition text-left flex items-center justify-between shadow-sm bg-white border-slate-200 hover:border-slate-300";
+      }
+
+      actualizarSelectDiaOrigen();
+      renderTareasDia();
+    }
+
+    function actualizarDatosHijo() {
+      const hijo = estadoApp[estadoApp.hijoActivo];
+      hijo.nombre = document.getElementById('inputNombre').value;
+      hijo.pin = document.getElementById('inputPin').value;
+      guardarStorage();
+      renderVistaHijo();
+    }
+
+    function renderTabsDias() {
+      const container = document.getElementById('tabsDias');
+      container.innerHTML = DIAS.map(dia => `
+        <button type="button" onclick="cambiarDia('${dia}')" class="px-4 py-2 rounded-xl text-sm font-medium transition ${dia === diaSeleccionado ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}">
+          ${dia}
+        </button>
+      `).join('');
+    }
+
+    function cambiarDia(dia) {
+      diaSeleccionado = dia;
+      renderTabsDias();
+      actualizarSelectDiaOrigen();
+      renderTareasDia();
+    }
+
+    function actualizarSelectDiaOrigen() {
+      const select = document.getElementById('selectDiaOrigen');
+      const diasOpciones = DIAS.filter(d => d !== diaSeleccionado);
+      select.innerHTML = diasOpciones.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+
+    function copiarTareasDeOtroDia() {
+      const diaOrigen = document.getElementById('selectDiaOrigen').value;
+      const tareasOrigen = estadoApp[estadoApp.hijoActivo].rutina[diaOrigen] || [];
+
+      if (tareasOrigen.length === 0) {
+        alert(`El día ${diaOrigen} no tiene tareas para copiar.`);
+        return;
+      }
+
+      if (confirm(`¿Copiar las ${tareasOrigen.length} tareas de ${diaOrigen} a ${diaSeleccionado}?`)) {
+        const copia = JSON.parse(JSON.stringify(tareasOrigen));
+        if (!estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado]) {
+          estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado] = [];
+        }
+        estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado].push(...copia);
+        guardarStorage();
+        renderTareasDia();
+      }
+    }
+
+    function renderTareasDia() {
+      document.getElementById('tituloDiaSeleccionado').innerText = `Tareas para el ${diaSeleccionado}`;
+      const tareas = estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado] || [];
+      document.getElementById('contadorTareas').innerText = `${tareas.length} tarea(s)`;
+
+      const container = document.getElementById('listaTareasDia');
+      if (tareas.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-400 py-6 text-center bg-slate-50 border border-dashed rounded-xl">No hay tareas agregadas para este día.</p>`;
+        return;
+      }
+
+      container.innerHTML = tareas.map((t, index) => `
+        <div class="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-slate-300 transition">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">${t.emoji || '⭐'}</span>
+            <div>
+              <p class="text-sm font-semibold text-slate-800">${t.texto}</p>
+              <p class="text-xs text-amber-600 font-medium">+${t.puntos} punto(s)</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-1">
+            <button type="button" onclick="moverTarea(${index}, -1)" ${index === 0 ? 'disabled class="text-slate-200 p-1 cursor-not-allowed"' : 'class="text-slate-400 hover:text-slate-700 p-1 transition"'}>
+              <i data-lucide="arrow-up" class="w-4 h-4"></i>
+            </button>
+            <button type="button" onclick="moverTarea(${index}, 1)" ${index === tareas.length - 1 ? 'disabled class="text-slate-200 p-1 cursor-not-allowed"' : 'class="text-slate-400 hover:text-slate-700 p-1 transition"'}>
+              <i data-lucide="arrow-down" class="w-4 h-4"></i>
+            </button>
+            <span class="text-slate-200 mx-1">|</span>
+            <button type="button" onclick="eliminarTarea(${index})" class="text-slate-400 hover:text-red-500 p-1 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function moverTarea(index, direccion) {
+      const tareas = estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado];
+      const nuevoIndex = index + direccion;
+
+      if (nuevoIndex < 0 || nuevoIndex >= tareas.length) return;
+
+      const temp = tareas[index];
+      tareas[index] = tareas[nuevoIndex];
+      tareas[nuevoIndex] = temp;
+
+      guardarStorage();
+      renderTareasDia();
+    }
+
+    function agregarTarea(e) {
+      if (e) e.preventDefault();
+      
+      const inputTexto = document.getElementById('nuevaTareaTexto');
+      const inputEmoji = document.getElementById('nuevaTareaEmoji');
+      const inputPuntos = document.getElementById('nuevaTareaPuntos');
+
+      const texto = inputTexto.value.trim();
+      const emoji = inputEmoji.value;
+      const puntos = parseInt(inputPuntos.value) || 1;
+
+      if (!texto) return;
+
+      if (!estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado]) {
+        estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado] = [];
+      }
+
+      estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado].push({ texto, emoji, puntos });
+      
+      inputTexto.value = '';
+      inputTexto.focus();
+      
+      guardarStorage();
+      renderTareasDia();
+    }
+
+    function eliminarTarea(index) {
+      estadoApp[estadoApp.hijoActivo].rutina[diaSeleccionado].splice(index, 1);
+      guardarStorage();
+      renderTareasDia();
+    }
+
+    function guardarStorage() {
+      localStorage.setItem('tableros_hijos_config', JSON.stringify(estadoApp));
+    }
+
+    function cargarStorage() {
+      const data = localStorage.getItem('tableros_hijos_config');
+      if (data) {
+        try {
+          estadoApp = JSON.parse(data);
+        } catch(e) {
+          console.error(e);
+        }
+      }
+    }
+
+    function exportarConfiguracion() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(estadoApp));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `respaldo_tableros_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importarConfiguracion(event) {
+      const fileReader = new FileReader();
+      fileReader.onload = function(e) {
+        try {
+          estadoApp = JSON.parse(e.target.result);
+          guardarStorage();
+          renderVistaHijo();
+          alert('Configuración cargada correctamente');
+        } catch(err) {
+          alert('Archivo JSON inválido.');
+        }
+      };
+      fileReader.readAsText(event.target.files[0]);
+    }
+
+    // GENERADOR DE TABLERO INTERACTIVO
+    function descargarHTMLHijo() {
+      const hijo = estadoApp[estadoApp.hijoActivo];
+      if(!hijo.nombre) {
+        alert('Por favor ingresa un nombre.');
+        return;
+      }
+
+      const configJSON = JSON.stringify(hijo);
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Mi Tablero - ${hijo.nombre}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"><\/script>
+  <script src="https://unpkg.com/lucide@latest"><\/script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 pb-12 select-none font-sans">
+
+  <!-- Header Mobile -->
+  <header class="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🌟</span>
+      <div>
+        <h1 class="font-bold text-slate-900 leading-none">${hijo.nombre}</h1>
+        <p class="text-[11px] text-slate-500 mt-0.5">Mis Tareas Semanales</p>
+      </div>
+    </div>
+    <div class="bg-amber-100 text-amber-900 font-extrabold px-3 py-1.5 rounded-full text-xs flex items-center gap-1 shadow-inner">
+      <i data-lucide="star" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
+      <span id="puntosTotales">0 pts</span>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    <!-- Selector de Día Horizontal -->
+    <div class="flex gap-2 overflow-x-auto pb-1" id="selectorDias"></div>
+
+    <!-- Contenedor de Tareas -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-4 min-h-[320px]">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+        <h2 id="tituloDiaVista" class="font-bold text-lg text-slate-800 flex items-center gap-2"></h2>
+        <span id="progresoDia" class="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full">0/0</span>
+      </div>
+
+      <div id="contenedorTareasMovil" class="space-y-3"></div>
+    </div>
+
+    <!-- Botón Resumen -->
+    <button onclick="abrirModalResumen()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold py-4 px-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95">
+      <i data-lucide="trophy" class="w-5 h-5"></i>
+      Ver Resumen Semanal (WhatsApp)
+    </button>
+
+    <div class="text-center pt-2">
+      <button onclick="reiniciarConPin()" class="text-xs text-slate-400 hover:text-slate-600 underline">Reiniciar semana (PIN Padres)</button>
+    </div>
+  </main>
+
+  <!-- Modal Resumen -->
+  <div id="modalResumen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border-4 border-emerald-400 relative space-y-4">
+      <button onclick="cerrarModalResumen()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div id="tarjetaReporte" class="text-center space-y-3 bg-gradient-to-b from-emerald-50 to-white p-4 rounded-2xl border border-emerald-100">
+        <div class="inline-block bg-emerald-500 text-white p-3 rounded-full shadow-lg">
+          <i data-lucide="award" class="w-8 h-8"></i>
+        </div>
+        <div>
+          <h3 class="font-extrabold text-xl text-slate-900">${hijo.nombre}</h3>
+          <p class="text-xs text-slate-500">Reporte Semanal de Cumplimiento</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+            <p class="text-2xl font-black text-emerald-600" id="resumenCompletado">0%</p>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Cumplimiento</p>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+            <p class="text-2xl font-black text-amber-500" id="resumenPuntos">0</p>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Puntos Ganados</p>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <p class="text-xs font-semibold text-slate-600 mb-2 text-left">Desglose Semanal:</p>
+          <div class="grid grid-cols-7 gap-1 text-center" id="desgloseDiasMini"></div>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-center text-slate-400">📸 Toma una captura de pantalla y envíasela a tus papás por WhatsApp.</p>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = ${configJSON};
+    const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    let diaActualMovil = getDiaActualIndex();
+    let estadoChecks = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarChecksStorage();
+      renderDiasMovil();
+      renderTareasMovil();
+      actualizarPuntosTotales();
+      lucide.createIcons();
+    });
+
+    function getDiaActualIndex() {
+      const day = new Date().getDay();
+      return day === 0 ? 6 : day - 1;
+    }
+
+    function cargarChecksStorage() {
+      const data = localStorage.getItem('checks_' + CONFIG.nombre);
+      if(data) estadoChecks = JSON.parse(data);
+    }
+
+    function guardarChecksStorage() {
+      localStorage.setItem('checks_' + CONFIG.nombre, JSON.stringify(estadoChecks));
+    }
+
+    function renderDiasMovil() {
+      const container = document.getElementById('selectorDias');
+      container.innerHTML = DIAS.map((dia, idx) => {
+        const esSeleccionado = idx === diaActualMovil;
+        const esHoy = idx === getDiaActualIndex();
+        const claseBtn = esSeleccionado ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white border border-slate-200 text-slate-600';
+        const ptoHoy = esHoy ? '<span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>' : '<span class="w-1.5 h-1.5"></span>';
+        return '<button onclick="seleccionarDiaMovil(' + idx + ')" class="flex-none px-4 py-2 rounded-2xl text-xs font-bold transition flex flex-col items-center gap-1 ' + claseBtn + '">' +
+               '<span>' + dia.slice(0,3) + '</span>' + ptoHoy + '</button>';
+      }).join('');
+    }
+
+    function seleccionarDiaMovil(idx) {
+      diaActualMovil = idx;
+      renderDiasMovil();
+      renderTareasMovil();
+    }
+
+    function renderTareasMovil() {
+      const nombreDia = DIAS[diaActualMovil];
+      document.getElementById('tituloDiaVista').innerText = nombreDia;
+      
+      const tareas = CONFIG.rutina[nombreDia] || [];
+      const container = document.getElementById('contenedorTareasMovil');
+
+      if(tareas.length === 0) {
+        container.innerHTML = '<p class="text-sm text-slate-400 text-center py-10">¡Sin tareas programadas para hoy! 🎉</p>';
+        document.getElementById('progresoDia').innerText = '0/0';
+        return;
+      }
+
+      let completadas = 0;
+      container.innerHTML = '';
+
+      tareas.forEach((t, idx) => {
+        const key = nombreDia + '_' + idx;
+        const checked = !!estadoChecks[key];
+        if(checked) completadas++;
+
+        const card = document.createElement('div');
+        card.onclick = () => toggleCheck(key);
+
+        card.className = 'p-4 rounded-2xl transition-all duration-300 transform active:scale-95 cursor-pointer flex items-center justify-between border-2 shadow-sm ' + 
+                         (checked ? 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-200' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-slate-300');
+
+        const switchBg = checked ? 'bg-white/30 justify-end' : 'bg-slate-300 justify-start';
+        const switchCircle = checked ? 'bg-white' : 'bg-white shadow-md';
+
+        card.innerHTML = 
+          '<div class="flex items-center gap-3">' +
+            '<span class="text-3xl filter drop-shadow-sm">' + (t.emoji || '⭐') + '</span>' +
+            '<div>' +
+              '<p class="text-sm font-extrabold leading-tight ' + (checked ? 'line-through opacity-90' : 'text-slate-800') + '">' + t.texto + '</p>' +
+              '<p class="text-[11px] font-bold mt-0.5 ' + (checked ? 'text-emerald-100' : 'text-amber-600') + '">+' + t.puntos + ' pt(s)</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="w-12 h-7 rounded-full p-1 flex items-center transition-colors duration-300 ' + switchBg + '">' +
+            '<div class="w-5 h-5 rounded-full transition-transform duration-300 ' + switchCircle + '"></div>' +
+          '</div>';
+
+        container.appendChild(card);
+      });
+
+      document.getElementById('progresoDia').innerText = completadas + '/' + tareas.length;
+      lucide.createIcons();
+    }
+
+    function toggleCheck(key) {
+      const estPrevio = !!estadoChecks[key];
+      estadoChecks[key] = !estPrevio;
+      
+      if(!estPrevio && typeof confetti === 'function') {
+        confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
+      }
+
+      guardarChecksStorage();
+      renderTareasMovil();
+      actualizarPuntosTotales();
+    }
+
+    function actualizarPuntosTotales() {
+      let total = 0;
+      DIAS.forEach(dia => {
+        const tareas = CONFIG.rutina[dia] || [];
+        tareas.forEach((t, idx) => {
+          if(estadoChecks[dia + '_' + idx]) {
+            total += parseInt(t.puntos || 1);
+          }
+        });
+      });
+      document.getElementById('puntosTotales').innerText = total + ' pts';
+    }
+
+    function abrirModalResumen() {
+      let totalTareas = 0;
+      let completadas = 0;
+      let puntos = 0;
+
+      const desgloseContainer = document.getElementById('desgloseDiasMini');
+      desgloseContainer.innerHTML = '';
+
+      DIAS.forEach(dia => {
+        const tareas = CONFIG.rutina[dia] || [];
+        let diaComp = 0;
+        
+        tareas.forEach((t, idx) => {
+          totalTareas++;
+          if(estadoChecks[dia + '_' + idx]) {
+            completadas++;
+            puntos += parseInt(t.puntos || 1);
+            diaComp++;
+          }
+        });
+
+        const pctDia = tareas.length > 0 ? Math.round((diaComp / tareas.length) * 100) : 0;
+        desgloseContainer.innerHTML += '<div class="bg-slate-50 p-1.5 rounded-xl border border-slate-100">' +
+          '<p class="text-[9px] font-bold text-slate-400">' + dia.slice(0,1) + '</p>' +
+          '<p class="text-[10px] font-black ' + (pctDia === 100 ? 'text-emerald-600' : 'text-slate-700') + '">' + pctDia + '%</p>' +
+        '</div>';
+      });
+
+      const pctTotal = totalTareas > 0 ? Math.round((completadas / totalTareas) * 100) : 0;
+      document.getElementById('resumenCompletado').innerText = pctTotal + '%';
+      document.getElementById('resumenPuntos').innerText = puntos;
+
+      document.getElementById('modalResumen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function cerrarModalResumen() {
+      document.getElementById('modalResumen').classList.add('hidden');
+    }
+
+    function reiniciarConPin() {
+      const pinIngresado = prompt('Ingresa el PIN de seguridad (Padres) para reiniciar la semana:');
+      if(pinIngresado === CONFIG.pin) {
+        if(confirm('¿Estás seguro de reiniciar todos los marcadores de la semana?')) {
+          estadoChecks = {};
+          guardarChecksStorage();
+          renderTareasMovil();
+          actualizarPuntosTotales();
+          alert('Semana reiniciada correctamente.');
+        }
+      } else if(pinIngresado !== null) {
+        alert('PIN incorrecto.');
+      }
+    }
+  <\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `tablero_${hijo.nombre.toLowerCase().replace(/\s+/g, '_')}.html`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  </script>
+</body>
+</html>

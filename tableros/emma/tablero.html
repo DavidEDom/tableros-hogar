@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Mi Tablero - Emma</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 pb-12 select-none font-sans">
+
+  <!-- Header Mobile -->
+  <header class="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🌟</span>
+      <div>
+        <h1 class="font-bold text-slate-900 leading-none">Emma</h1>
+        <p class="text-[11px] text-slate-500 mt-0.5">Mis Tareas Semanales</p>
+      </div>
+    </div>
+    <div class="bg-amber-100 text-amber-900 font-extrabold px-3 py-1.5 rounded-full text-xs flex items-center gap-1 shadow-inner">
+      <i data-lucide="star" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
+      <span id="puntosTotales">0 pts</span>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+    <!-- Selector de Día Horizontal -->
+    <div class="flex gap-2 overflow-x-auto pb-1" id="selectorDias"></div>
+
+    <!-- Contenedor de Tareas -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-4 min-h-[320px]">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+        <h2 id="tituloDiaVista" class="font-bold text-lg text-slate-800 flex items-center gap-2"></h2>
+        <span id="progresoDia" class="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full">0/0</span>
+      </div>
+
+      <div id="contenedorTareasMovil" class="space-y-3"></div>
+    </div>
+
+    <!-- Botón Resumen -->
+    <button onclick="abrirModalResumen()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold py-4 px-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition active:scale-95">
+      <i data-lucide="trophy" class="w-5 h-5"></i>
+      Ver Resumen Semanal (WhatsApp)
+    </button>
+
+    <div class="text-center pt-2">
+      <button onclick="reiniciarConPin()" class="text-xs text-slate-400 hover:text-slate-600 underline">Reiniciar semana (PIN Padres)</button>
+    </div>
+  </main>
+
+  <!-- Modal Resumen -->
+  <div id="modalResumen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl border-4 border-emerald-400 relative space-y-4">
+      <button onclick="cerrarModalResumen()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div id="tarjetaReporte" class="text-center space-y-3 bg-gradient-to-b from-emerald-50 to-white p-4 rounded-2xl border border-emerald-100">
+        <div class="inline-block bg-emerald-500 text-white p-3 rounded-full shadow-lg">
+          <i data-lucide="award" class="w-8 h-8"></i>
+        </div>
+        <div>
+          <h3 class="font-extrabold text-xl text-slate-900">Emma</h3>
+          <p class="text-xs text-slate-500">Reporte Semanal de Cumplimiento</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+            <p class="text-2xl font-black text-emerald-600" id="resumenCompletado">0%</p>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Cumplimiento</p>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+            <p class="text-2xl font-black text-amber-500" id="resumenPuntos">0</p>
+            <p class="text-[10px] text-slate-400 uppercase font-bold">Puntos Ganados</p>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <p class="text-xs font-semibold text-slate-600 mb-2 text-left">Desglose Semanal:</p>
+          <div class="grid grid-cols-7 gap-1 text-center" id="desgloseDiasMini"></div>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-center text-slate-400">📸 Toma una captura de pantalla y envíasela a tus papás por WhatsApp.</p>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {"nombre":"Emma","pin":"1234","rutina":{"Lunes":[{"texto":"Cambiarse el uniforme","emoji":"⚡","puntos":1},{"texto":"dientes mañana","emoji":"🪥","puntos":1},{"texto":"dientes noche","emoji":"🪥","puntos":1},{"texto":"Tareas","emoji":"📚","puntos":5},{"texto":"1","emoji":"🚿","puntos":1}],"Martes":[{"texto":"Cambiarse el uniforme","emoji":"⚡","puntos":1},{"texto":"dientes mañana","emoji":"🪥","puntos":1},{"texto":"dientes noche","emoji":"🪥","puntos":1},{"texto":"Tareas","emoji":"📚","puntos":5},{"texto":"1","emoji":"🚿","puntos":1}],"Miércoles":[{"texto":"Cambiarse el uniforme","emoji":"⚡","puntos":1},{"texto":"dientes mañana","emoji":"🪥","puntos":1},{"texto":"dientes noche","emoji":"🪥","puntos":1},{"texto":"Tareas","emoji":"📚","puntos":5},{"texto":"1","emoji":"🚿","puntos":1}],"Jueves":[{"texto":"Cambiarse el uniforme","emoji":"⚡","puntos":1},{"texto":"dientes mañana","emoji":"🪥","puntos":1},{"texto":"dientes noche","emoji":"🪥","puntos":1},{"texto":"Tareas","emoji":"📚","puntos":5},{"texto":"1","emoji":"🚿","puntos":1}],"Viernes":[{"texto":"Cambiarse el uniforme","emoji":"⚡","puntos":1},{"texto":"dientes mañana","emoji":"🪥","puntos":1},{"texto":"dientes noche","emoji":"🪥","puntos":1},{"texto":"1","emoji":"🚿","puntos":1}],"Sábado":[],"Domingo":[]}};
+    const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    let diaActualMovil = getDiaActualIndex();
+    let estadoChecks = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarChecksStorage();
+      renderDiasMovil();
+      renderTareasMovil();
+      actualizarPuntosTotales();
+      lucide.createIcons();
+    });
+
+    function getDiaActualIndex() {
+      const day = new Date().getDay();
+      return day === 0 ? 6 : day - 1;
+    }
+
+    function cargarChecksStorage() {
+      const data = localStorage.getItem('checks_' + CONFIG.nombre);
+      if(data) estadoChecks = JSON.parse(data);
+    }
+
+    function guardarChecksStorage() {
+      localStorage.setItem('checks_' + CONFIG.nombre, JSON.stringify(estadoChecks));
+    }
+
+    function renderDiasMovil() {
+      const container = document.getElementById('selectorDias');
+      container.innerHTML = DIAS.map((dia, idx) => {
+        const esSeleccionado = idx === diaActualMovil;
+        const esHoy = idx === getDiaActualIndex();
+        const claseBtn = esSeleccionado ? 'bg-indigo-600 text-white shadow-md scale-105' : 'bg-white border border-slate-200 text-slate-600';
+        const ptoHoy = esHoy ? '<span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>' : '<span class="w-1.5 h-1.5"></span>';
+        return '<button onclick="seleccionarDiaMovil(' + idx + ')" class="flex-none px-4 py-2 rounded-2xl text-xs font-bold transition flex flex-col items-center gap-1 ' + claseBtn + '">' +
+               '<span>' + dia.slice(0,3) + '</span>' + ptoHoy + '</button>';
+      }).join('');
+    }
+
+    function seleccionarDiaMovil(idx) {
+      diaActualMovil = idx;
+      renderDiasMovil();
+      renderTareasMovil();
+    }
+
+    function renderTareasMovil() {
+      const nombreDia = DIAS[diaActualMovil];
+      document.getElementById('tituloDiaVista').innerText = nombreDia;
+      
+      const tareas = CONFIG.rutina[nombreDia] || [];
+      const container = document.getElementById('contenedorTareasMovil');
+
+      if(tareas.length === 0) {
+        container.innerHTML = '<p class="text-sm text-slate-400 text-center py-10">¡Sin tareas programadas para hoy! 🎉</p>';
+        document.getElementById('progresoDia').innerText = '0/0';
+        return;
+      }
+
+      let completadas = 0;
+      container.innerHTML = '';
+
+      tareas.forEach((t, idx) => {
+        const key = nombreDia + '_' + idx;
+        const checked = !!estadoChecks[key];
+        if(checked) completadas++;
+
+        const card = document.createElement('div');
+        card.onclick = () => toggleCheck(key);
+
+        card.className = 'p-4 rounded-2xl transition-all duration-300 transform active:scale-95 cursor-pointer flex items-center justify-between border-2 shadow-sm ' + 
+                         (checked ? 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-200' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-slate-300');
+
+        const switchBg = checked ? 'bg-white/30 justify-end' : 'bg-slate-300 justify-start';
+        const switchCircle = checked ? 'bg-white' : 'bg-white shadow-md';
+
+        card.innerHTML = 
+          '<div class="flex items-center gap-3">' +
+            '<span class="text-3xl filter drop-shadow-sm">' + (t.emoji || '⭐') + '</span>' +
+            '<div>' +
+              '<p class="text-sm font-extrabold leading-tight ' + (checked ? 'line-through opacity-90' : 'text-slate-800') + '">' + t.texto + '</p>' +
+              '<p class="text-[11px] font-bold mt-0.5 ' + (checked ? 'text-emerald-100' : 'text-amber-600') + '">+' + t.puntos + ' pt(s)</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="w-12 h-7 rounded-full p-1 flex items-center transition-colors duration-300 ' + switchBg + '">' +
+            '<div class="w-5 h-5 rounded-full transition-transform duration-300 ' + switchCircle + '"></div>' +
+          '</div>';
+
+        container.appendChild(card);
+      });
+
+      document.getElementById('progresoDia').innerText = completadas + '/' + tareas.length;
+      lucide.createIcons();
+    }
+
+    function toggleCheck(key) {
+      const estPrevio = !!estadoChecks[key];
+      estadoChecks[key] = !estPrevio;
+      
+      if(!estPrevio && typeof confetti === 'function') {
+        confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
+      }
+
+      guardarChecksStorage();
+      renderTareasMovil();
+      actualizarPuntosTotales();
+    }
+
+    function actualizarPuntosTotales() {
+      let total = 0;
+      DIAS.forEach(dia => {
+        const tareas = CONFIG.rutina[dia] || [];
+        tareas.forEach((t, idx) => {
+          if(estadoChecks[dia + '_' + idx]) {
+            total += parseInt(t.puntos || 1);
+          }
+        });
+      });
+      document.getElementById('puntosTotales').innerText = total + ' pts';
+    }
+
+    function abrirModalResumen() {
+      let totalTareas = 0;
+      let completadas = 0;
+      let puntos = 0;
+
+      const desgloseContainer = document.getElementById('desgloseDiasMini');
+      desgloseContainer.innerHTML = '';
+
+      DIAS.forEach(dia => {
+        const tareas = CONFIG.rutina[dia] || [];
+        let diaComp = 0;
+        
+        tareas.forEach((t, idx) => {
+          totalTareas++;
+          if(estadoChecks[dia + '_' + idx]) {
+            completadas++;
+            puntos += parseInt(t.puntos || 1);
+            diaComp++;
+          }
+        });
+
+        const pctDia = tareas.length > 0 ? Math.round((diaComp / tareas.length) * 100) : 0;
+        desgloseContainer.innerHTML += '<div class="bg-slate-50 p-1.5 rounded-xl border border-slate-100">' +
+          '<p class="text-[9px] font-bold text-slate-400">' + dia.slice(0,1) + '</p>' +
+          '<p class="text-[10px] font-black ' + (pctDia === 100 ? 'text-emerald-600' : 'text-slate-700') + '">' + pctDia + '%</p>' +
+        '</div>';
+      });
+
+      const pctTotal = totalTareas > 0 ? Math.round((completadas / totalTareas) * 100) : 0;
+      document.getElementById('resumenCompletado').innerText = pctTotal + '%';
+      document.getElementById('resumenPuntos').innerText = puntos;
+
+      document.getElementById('modalResumen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function cerrarModalResumen() {
+      document.getElementById('modalResumen').classList.add('hidden');
+    }
+
+    function reiniciarConPin() {
+      const pinIngresado = prompt('Ingresa el PIN de seguridad (Padres) para reiniciar la semana:');
+      if(pinIngresado === CONFIG.pin) {
+        if(confirm('¿Estás seguro de reiniciar todos los marcadores de la semana?')) {
+          estadoChecks = {};
+          guardarChecksStorage();
+          renderTareasMovil();
+          actualizarPuntosTotales();
+          alert('Semana reiniciada correctamente.');
+        }
+      } else if(pinIngresado !== null) {
+        alert('PIN incorrecto.');
+      }
+    }
+  </script>
+</body>
+</html>
